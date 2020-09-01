@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/4.3.1/workbox-sw.js");
 
 importScripts(
-  "/rlottie-wasm/precache-manifest.000da1386e8bd1ccce83107a013eb646.js"
+  "/rlottie-wasm/precache-manifest.511d5b9c12daea1fac727dbf0bf83809.js"
 );
 
 self.addEventListener('message', (event) => {

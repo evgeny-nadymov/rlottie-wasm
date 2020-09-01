@@ -1,6 +1,6 @@
 self.__precacheManifest = (self.__precacheManifest || []).concat([
   {
-    "revision": "6485db7967ccb3b83bb4a831f57f8e5b",
+    "revision": "ce54606067feec99b567dcd8c55848fe",
     "url": "/rlottie-wasm/index.html"
   },
   {
