@@ -127,7 +127,7 @@ const RLottie = (function () {
                 let workersRemain = rlottie.WORKERS_LIMIT;
                 for (let workerNum = 0; workerNum < rlottie.WORKERS_LIMIT; workerNum++) {
                     (function(workerNum) {
-                        let rlottieWorker = rlottieWorkers[workerNum] = new QueryableWorker('tgsticker-worker.js');
+                        const rlottieWorker = rlottieWorkers[workerNum] = new QueryableWorker('rlottie-wasm/rlottie-wasm.worker.js');
                         rlottieWorker.addListener('ready', function () {
                             console.log(dT(), 'worker #' + workerNum + ' ready');
                             rlottieWorker.addListener('frame', onFrame);
@@ -154,21 +154,22 @@ const RLottie = (function () {
             console.warn('only picture tag allowed');
             return;
         }
+
         options = options || {};
-        var rlPlayer = el.rlPlayer = {};
+        const rlPlayer = el.rlPlayer = {};
         rlPlayer.thumb = el.querySelector('img');
-        var tgs_source = el.querySelector('source[type="application/x-tgsticker"]');
-        var url = tgs_source && tgs_source.getAttribute('srcset') || '';
+        const tgs_source = el.querySelector('source[type="application/x-tgsticker"]');
+        const url = tgs_source && tgs_source.getAttribute('srcset') || '';
         if (!url) {
             console.warn('picture source application/x-tgsticker not found');
             return;
         }
-        var pic_width = options.width || el.clientWidth || el.getAttribute('width');
-        var pic_height = options.height || el.clientHeight || el.getAttribute('height');
+        let pic_width = options.width || el.clientWidth || el.getAttribute('width');
+        let pic_height = options.height || el.clientHeight || el.getAttribute('height');
 
         console.log('player', [pic_width, pic_height]);
 
-        var curDeviceRatio = options.maxDeviceRatio ? Math.min(options.maxDeviceRatio, deviceRatio) : deviceRatio;
+        const curDeviceRatio = options.maxDeviceRatio ? Math.min(options.maxDeviceRatio, deviceRatio) : deviceRatio;
         if (!pic_width || !pic_height) {
             pic_width = pic_height = 256;
         }
@@ -187,7 +188,6 @@ const RLottie = (function () {
         rlPlayer.canvas.height = pic_height * curDeviceRatio;
         rlPlayer.el.appendChild(rlPlayer.canvas);
         rlPlayer.context = rlPlayer.canvas.getContext('2d');
-        // rlPlayer.context.scale(curDeviceRatio, curDeviceRatio);
         rlPlayer.forceRender = true;
 
         if (!rlottieFrames.has(url)) {
@@ -221,9 +221,9 @@ const RLottie = (function () {
 
     function destroyPlayer(el) {
         if (!el.rlPlayer) return;
-        var rlPlayer = el.rlPlayer;
-        delete rlottie.players[rlPlayer.reqId];
-        delete rlPlayer;
+
+        delete rlottie.players[el.rlPlayer.reqId];
+
         setupMainLoop();
     }
 
@@ -234,13 +234,12 @@ const RLottie = (function () {
         }
 
         if (!rlPlayer.forceRender) {
-            if (!rlPlayer.options.playWithoutFocus && !document.hasFocus() ||
-                !(data && data.frameCount)) {
+            if (!rlPlayer.options.playWithoutFocus && !document.hasFocus() || !data.frameCount) {
                 return false;
             }
-            var isInViewport = rlPlayer.isInViewport;
+            let isInViewport = rlPlayer.isInViewport;
             if (isInViewport === undefined || checkViewport) {
-                var rect = rlPlayer.el.getBoundingClientRect();
+                const rect = rlPlayer.el.getBoundingClientRect();
                 if (rect.bottom < 0 ||
                     rect.right < 0 ||
                     rect.top > (window.innerHeight || document.documentElement.clientHeight) ||
@@ -261,9 +260,12 @@ const RLottie = (function () {
             (data.frameQueue.queue.length > 0 ? data.frameQueue.queue[0] : null);
 
         if (frame !== null) {
-            doRender(rlPlayer, frame, shift);
+            doRender(rlPlayer, frame);
 
             if (shift) {
+                const now = +(new Date());
+                data.frameThen = now - (now % data.frameInterval);
+
                 const nextFrameNo = data.nextFrameNo;
                 if (nextFrameNo !== false) {
                     data.nextFrameNo = false;
@@ -275,17 +277,10 @@ const RLottie = (function () {
         return true;
     }
 
-    function doRender(rlPlayer, frame, shift) {
-        const data = rlottieFrames.get(rlPlayer.url);
-
+    function doRender(rlPlayer, frame) {
         rlPlayer.forceRender = false;
         rlPlayer.imageData.data.set(frame);
         rlPlayer.context.putImageData(rlPlayer.imageData, 0, 0);
-
-        if (shift) {
-            const now = +(new Date());
-            data.frameThen = now - (now % data.frameInterval);
-        }
 
         if (rlPlayer.thumb) {
             rlPlayer.el.removeChild(rlPlayer.thumb);
@@ -313,6 +308,7 @@ const RLottie = (function () {
     function onFrame(reqId, frameNo, frame) {
         const rlPlayer = rlottie.players[reqId];
         const data = rlottieFrames.get(rlPlayer.url);
+
         if (rlPlayer.options.cachingModulo &&
             !data.frames[frameNo] &&
             (!frameNo || ((reqId + frameNo) % rlPlayer.options.cachingModulo))) {
@@ -344,6 +340,7 @@ const RLottie = (function () {
             data.frameCount = frameCount;
             data.frameQueue = new FrameQueue(fps / 4);
         }
+
         setupMainLoop();
         requestFrame(reqId, 0);
     }
