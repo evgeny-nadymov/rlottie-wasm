@@ -1,9 +1,9 @@
-var RLottie = (function () {
-    var rlottie = {}, apiInitStarted = false, apiInited = false, initCallbacks = [];
-    var deviceRatio = window.devicePixelRatio || 1;
-    var rlottieWorkers = [], curWorkerNum = 0, rlottieFrames = new Map();
+const RLottie = (function () {
+    let rlottie = {}, apiInitStarted = false, apiInited = false, initCallbacks = [];
+    let deviceRatio = window.devicePixelRatio || 1;
+    let rlottieWorkers = [], curWorkerNum = 0, rlottieFrames = new Map();
 
-    var startTime = +(new Date());
+    let startTime = +(new Date());
     function dT() {
         return '[' + ((+(new Date()) - startTime)/ 1000.0) + '] ';
     }
@@ -13,15 +13,15 @@ var RLottie = (function () {
     rlottie.frames = rlottieFrames;
     rlottie.WORKERS_LIMIT = 4;
 
-    var reqId = 0;
-    var mainLoopTO = false;
-    var checkViewportDate = false;
-    var lastRenderDate = false;
+    let reqId = 0;
+    let mainLoopTO = false;
+    let checkViewportDate = false;
+    let lastRenderDate = false;
 
-    var userAgent = window.navigator.userAgent;
-    var isSafari = !!window.safari ||
+    let { userAgent } = window.navigator;
+    let isSafari = !!window.safari ||
         !!(userAgent && (/\b(iPad|iPhone|iPod)\b/.test(userAgent) || (!!userAgent.match('Safari') && !userAgent.match('Chrome'))));
-    var isRAF = isSafari;
+    let isRAF = isSafari;
     rlottie.isSafari = isSafari;
 
     function wasmIsSupported() {
@@ -51,23 +51,9 @@ var RLottie = (function () {
     rlottie.isSupported = isSupported();
 
     function mainLoop() {
-        // console.log('mainLoop');
-        let rlPlayer, delta, rendered;
+        let delta, rendered;
         const now = +Date.now();
         const checkViewport = !checkViewportDate || (now - checkViewportDate) > 1000;
-        // for (let key in rlottie.players) {
-        //     rlPlayer = rlottie.players[key];
-        //     if (rlPlayer &&
-        //         rlPlayer.frameCount) {
-        //         delta = now - rlPlayer.frameThen;
-        //         if (delta > rlPlayer.frameInterval) {
-        //             rendered = render(rlPlayer, checkViewport, true);
-        //             if (rendered) {
-        //                 lastRenderDate = now;
-        //             }
-        //         }
-        //     }
-        // }
 
         const shiftPlayer = new Map();
         for (let key in rlottie.players) {
@@ -75,12 +61,15 @@ var RLottie = (function () {
         }
         for (let key in rlottie.players) {
             const rlPlayer = rlottie.players[key];
-            if (rlPlayer && rlPlayer.frameCount) {
-                delta = now - rlPlayer.frameThen;
-                if (delta > rlPlayer.frameInterval) {
-                    rendered = render(rlPlayer, checkViewport, shiftPlayer.get(rlPlayer.url) === key);
-                    if (rendered) {
-                        lastRenderDate = now;
+            if (rlPlayer) {
+                const data = rlottieFrames.get(rlPlayer.url);
+                if (data && data.frameCount) {
+                    delta = now - data.frameThen;
+                    if (delta > data.frameInterval) {
+                        rendered = render(rlPlayer, checkViewport, shiftPlayer.get(rlPlayer.url) === key);
+                        if (rendered) {
+                            lastRenderDate = now;
+                        }
                     }
                 }
             }
@@ -98,13 +87,15 @@ var RLottie = (function () {
     }
 
     function setupMainLoop() {
-        var isEmpty = true, key, rlPlayer;
-        for (key in rlottie.players) {
-            rlPlayer = rlottie.players[key];
-            if (rlPlayer &&
-                rlPlayer.frameCount) {
-                isEmpty = false;
-                break;
+        let isEmpty = true;
+        for (const key in rlottie.players) {
+            const rlPlayer = rlottie.players[key];
+            if (rlPlayer) {
+                const data = rlottieFrames.get(rlPlayer.url);
+                if (data && data.frameCount) {
+                    isEmpty = false;
+                    break;
+                }
             }
         }
         if ((mainLoopTO !== false) === isEmpty) {
@@ -157,18 +148,6 @@ var RLottie = (function () {
         }
     }
 
-    function destroyWorkers() {
-        for (var workerNum = 0; workerNum < rlottie.WORKERS_LIMIT; workerNum++) {
-            if (rlottieWorkers[workerNum]) {
-                rlottieWorkers[workerNum].terminate();
-                console.log('worker #' + workerNum + ' terminated');
-            }
-        }
-        console.log('workers destroyed');
-        apiInitStarted = apiInited = false;
-        rlottieWorkers = [];
-    }
-
     function initPlayer(el, options) {
         if (el.rlPlayer) return;
         if (el.tagName.toLowerCase() != 'picture') {
@@ -197,23 +176,47 @@ var RLottie = (function () {
         rlPlayer.reqId = ++reqId;
         rlottie.players[reqId] = rlPlayer;
         rlPlayer.el = el;
-        rlPlayer.nextFrameNo = false;
-        rlPlayer.frames = {};
         rlPlayer.width = pic_width * curDeviceRatio;
         rlPlayer.height = pic_height * curDeviceRatio;
-        rlPlayer.rWorker = rlottieWorkers[curWorkerNum++];
-        if (curWorkerNum >= rlottieWorkers.length) {
-            curWorkerNum = 0;
-        }
         rlPlayer.options = options;
-        // rlPlayer.times = [];
         rlPlayer.clamped = new Uint8ClampedArray(rlPlayer.width * rlPlayer.height * 4);
         rlPlayer.imageData = new ImageData(rlPlayer.width, rlPlayer.height);
-        rlPlayer.rWorker.sendQuery('loadFromData', rlPlayer.reqId, url, rlPlayer.width, rlPlayer.height);
+
+        rlPlayer.canvas = document.createElement('canvas');
+        rlPlayer.canvas.width = pic_width * curDeviceRatio;
+        rlPlayer.canvas.height = pic_height * curDeviceRatio;
+        rlPlayer.el.appendChild(rlPlayer.canvas);
+        rlPlayer.context = rlPlayer.canvas.getContext('2d');
+        // rlPlayer.context.scale(curDeviceRatio, curDeviceRatio);
+        rlPlayer.forceRender = true;
 
         if (!rlottieFrames.has(url)) {
-            rlottieFrames.set(url, {});
+            const rWorker = rlottieWorkers[curWorkerNum++];
+            if (curWorkerNum >= rlottieWorkers.length) {
+                curWorkerNum = 0;
+            }
+
+            rlottieFrames.set(url, {
+                reqId: rlPlayer.reqId,
+                nextFrameNo: false,
+                rWorker,
+                frames: {}
+            });
+
+            rWorker.sendQuery('loadFromData', rlPlayer.reqId, url, rlPlayer.width, rlPlayer.height);
         }
+    }
+
+    function destroyWorkers() {
+        for (let workerNum = 0; workerNum < rlottie.WORKERS_LIMIT; workerNum++) {
+            if (rlottieWorkers[workerNum]) {
+                rlottieWorkers[workerNum].terminate();
+                console.log('worker #' + workerNum + ' terminated');
+            }
+        }
+        console.log('workers destroyed');
+        apiInitStarted = apiInited = false;
+        rlottieWorkers = [];
     }
 
     function destroyPlayer(el) {
@@ -225,15 +228,14 @@ var RLottie = (function () {
     }
 
     function render(rlPlayer, checkViewport, shift) {
-        const frames = rlottieFrames.get(rlPlayer.url);
-        if (!rlPlayer.canvas ||
-            rlPlayer.canvas.width == 0 ||
-            rlPlayer.canvas.height == 0) {
+        const data = rlottieFrames.get(rlPlayer.url);
+        if (!rlPlayer.canvas || rlPlayer.canvas.width == 0 || rlPlayer.canvas.height == 0) {
             return false;
         }
+
         if (!rlPlayer.forceRender) {
             if (!rlPlayer.options.playWithoutFocus && !document.hasFocus() ||
-                !rlPlayer.frameCount) {
+                !(data && data.frameCount)) {
                 return false;
             }
             var isInViewport = rlPlayer.isInViewport;
@@ -253,36 +255,38 @@ var RLottie = (function () {
                 return false;
             }
         }
-        let frame = shift ?
-            rlPlayer.frameQueue.shift() :
-            (rlPlayer.frameQueue.queue.length > 0 ? rlPlayer.frameQueue.queue[0] : null);
-        if (frames && frames.frameQueue) {
-            frame = shift ?
-                frames.frameQueue.shift() :
-                (frames.frameQueue.queue.length > 0 ? frames.frameQueue.queue[0] : null);
-        }
-        console.log('frame', [shift, frame]);
+
+        const frame = shift ?
+            data.frameQueue.shift() :
+            (data.frameQueue.queue.length > 0 ? data.frameQueue.queue[0] : null);
+
         if (frame !== null) {
-            doRender(rlPlayer, frame);
-            var nextFrameNo = rlPlayer.nextFrameNo;
-            if (nextFrameNo !== false) {
-                rlPlayer.nextFrameNo = false;
-                requestFrame(rlPlayer.reqId, nextFrameNo);
+            doRender(rlPlayer, frame, shift);
+
+            if (shift) {
+                const nextFrameNo = data.nextFrameNo;
+                if (nextFrameNo !== false) {
+                    data.nextFrameNo = false;
+                    requestFrame(data.reqId, nextFrameNo);
+                }
             }
         }
 
         return true;
     }
 
-    function doRender(rlPlayer, frame) {
+    function doRender(rlPlayer, frame, shift) {
+        const data = rlottieFrames.get(rlPlayer.url);
+
         rlPlayer.forceRender = false;
         rlPlayer.imageData.data.set(frame);
         rlPlayer.context.putImageData(rlPlayer.imageData, 0, 0);
-        var now = +(new Date());
-        // if (rlPlayer.frameThen) {
-        //     rlPlayer.times.push(now - rlPlayer.frameThen)
-        // }
-        rlPlayer.frameThen = now - (now % rlPlayer.frameInterval);
+
+        if (shift) {
+            const now = +(new Date());
+            data.frameThen = now - (now % data.frameInterval);
+        }
+
         if (rlPlayer.thumb) {
             rlPlayer.el.removeChild(rlPlayer.thumb);
             delete rlPlayer.thumb;
@@ -290,72 +294,55 @@ var RLottie = (function () {
     }
 
     function requestFrame(reqId, frameNo) {
-        var rlPlayer = rlottie.players[reqId];
-        var frame = rlPlayer.frames[frameNo];
+        const rlPlayer = rlottie.players[reqId];
+        const data = rlottieFrames.get(rlPlayer.url);
+
+        const frame = data.frames[frameNo];
         if (frame) {
             onFrame(reqId, frameNo, frame)
         } else if (isSafari) {
-            rlPlayer.rWorker.sendQuery('renderFrame', reqId, frameNo);
+            if (data.reqId === reqId) data.rWorker.sendQuery('renderFrame', reqId, frameNo);
         } else {
             if(!rlPlayer.clamped.length) { // fix detached
                 rlPlayer.clamped = new Uint8ClampedArray(rlPlayer.width * rlPlayer.height * 4);
             }
-            rlPlayer.rWorker.sendQuery('renderFrame', reqId, frameNo, rlPlayer.clamped);
+            if (data.reqId === reqId) data.rWorker.sendQuery('renderFrame', reqId, frameNo, rlPlayer.clamped);
         }
     }
 
     function onFrame(reqId, frameNo, frame) {
-        var rlPlayer = rlottie.players[reqId];
+        const rlPlayer = rlottie.players[reqId];
+        const data = rlottieFrames.get(rlPlayer.url);
         if (rlPlayer.options.cachingModulo &&
-            !rlPlayer.frames[frameNo] &&
+            !data.frames[frameNo] &&
             (!frameNo || ((reqId + frameNo) % rlPlayer.options.cachingModulo))) {
-            rlPlayer.frames[frameNo] = new Uint8ClampedArray(frame)
+            data.frames[frameNo] = new Uint8ClampedArray(frame)
         }
-        rlPlayer.frameQueue.push(frame);
-        const frames = rlottieFrames.get(rlPlayer.url);
-        if (frames && frames.frameQueue && frames.reqId === reqId) {
-            frames.frameQueue.push(frame);
+        if (data && data.reqId === reqId) {
+            data.frameQueue.push(frame);
         }
 
-        var nextFrameNo = ++frameNo;
-        if (nextFrameNo >= rlPlayer.frameCount) {
+        let nextFrameNo = ++frameNo;
+        if (nextFrameNo >= data.frameCount) {
             nextFrameNo = 0;
-            // if (rlPlayer.times.length) {
-            //   var avg = 0;
-            //   for (var i = 0; i < rlPlayer.times.length; i++) {
-            //     avg += rlPlayer.times[i] / rlPlayer.times.length;
-            //   }
-            //   console.log('avg time: ' +  avg + ', ' + rlPlayer.fps);
-            //   rlPlayer.times = [];
-            // }
         }
-        if (rlPlayer.frameQueue.needsMore() || frames && frames.frameQueue.needsMore())  {
+        if (data.frameQueue.needsMore())  {
             requestFrame(reqId, nextFrameNo)
         } else {
-            rlPlayer.nextFrameNo = nextFrameNo;
+            data.nextFrameNo = nextFrameNo;
         }
     }
 
     function onLoaded(reqId, frameCount, fps) {
         const rlPlayer = rlottie.players[reqId];
-        const frames = rlottieFrames.get(rlPlayer.url);
+        const data = rlottieFrames.get(rlPlayer.url);
 
-        rlPlayer.canvas = document.createElement('canvas');
-        rlPlayer.canvas.width = rlPlayer.width;
-        rlPlayer.canvas.height = rlPlayer.height;
-        rlPlayer.el.appendChild(rlPlayer.canvas);
-        rlPlayer.context = rlPlayer.canvas.getContext('2d');
-
-        rlPlayer.fps = fps;
-        rlPlayer.frameInterval = 1000 / rlPlayer.fps;
-        rlPlayer.frameThen = Date.now();
-        rlPlayer.frameCount = frameCount;
-        rlPlayer.forceRender = true;
-        rlPlayer.frameQueue = new FrameQueue(fps / 4);
-        if (frames && !frames.frameQueue) {
-            frames.reqId = rlPlayer.reqId;
-            frames.rWorker = rlPlayer.rWorker;
-            frames.frameQueue = new FrameQueue(fps / 4);
+        if (data && !data.frameQueue) {
+            data.fps = fps;
+            data.frameThen = Date.now();
+            data.frameInterval = 1000 / fps;
+            data.frameCount = frameCount;
+            data.frameQueue = new FrameQueue(fps / 4);
         }
         setupMainLoop();
         requestFrame(reqId, 0);
