@@ -167,7 +167,7 @@ const RLottie = (function () {
         let pic_width = options.width || el.clientWidth || el.getAttribute('width');
         let pic_height = options.height || el.clientHeight || el.getAttribute('height');
 
-        console.log('player', [pic_width, pic_height]);
+        // console.log('player', [pic_width, pic_height]);
 
         const curDeviceRatio = options.maxDeviceRatio ? Math.min(options.maxDeviceRatio, deviceRatio) : deviceRatio;
         if (!pic_width || !pic_height) {
@@ -420,7 +420,7 @@ class QueryableWorker {
             });
         } else {
             const transfer = [];
-            for(var i = 0; i < args.length; i++) {
+            for(let i = 0; i < args.length; i++) {
                 if(args[i] instanceof ArrayBuffer) {
                     transfer.push(args[i]);
                 }
