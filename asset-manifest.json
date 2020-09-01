@@ -1,0 +1,23 @@
+{
+  "files": {
+    "main.css": "/rlottie-wasm/static/css/main.e3c2d9fe.chunk.css",
+    "main.js": "/rlottie-wasm/static/js/main.c8a22086.chunk.js",
+    "main.js.map": "/rlottie-wasm/static/js/main.c8a22086.chunk.js.map",
+    "runtime-main.js": "/rlottie-wasm/static/js/runtime-main.1faab748.js",
+    "runtime-main.js.map": "/rlottie-wasm/static/js/runtime-main.1faab748.js.map",
+    "static/js/2.26845988.chunk.js": "/rlottie-wasm/static/js/2.26845988.chunk.js",
+    "static/js/2.26845988.chunk.js.map": "/rlottie-wasm/static/js/2.26845988.chunk.js.map",
+    "index.html": "/rlottie-wasm/index.html",
+    "precache-manifest.000da1386e8bd1ccce83107a013eb646.js": "/rlottie-wasm/precache-manifest.000da1386e8bd1ccce83107a013eb646.js",
+    "service-worker.js": "/rlottie-wasm/service-worker.js",
+    "static/css/main.e3c2d9fe.chunk.css.map": "/rlottie-wasm/static/css/main.e3c2d9fe.chunk.css.map",
+    "static/js/2.26845988.chunk.js.LICENSE.txt": "/rlottie-wasm/static/js/2.26845988.chunk.js.LICENSE.txt",
+    "static/media/logo.svg": "/rlottie-wasm/static/media/logo.5d5d9eef.svg"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.1faab748.js",
+    "static/js/2.26845988.chunk.js",
+    "static/css/main.e3c2d9fe.chunk.css",
+    "static/js/main.c8a22086.chunk.js"
+  ]
+}
